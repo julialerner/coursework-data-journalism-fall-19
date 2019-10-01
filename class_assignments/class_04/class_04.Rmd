@@ -59,6 +59,17 @@ Generally, it's good practice to load packages you wish to work with at the begi
 
 **Task**: Create a code block below, write and execute the simple function to load the Tidyverse family of packages and the janitor package.  
 
+```{r}
+# Install Janitor package
+# install.packages('janitor')
+
+# Load Tidyverse and Janitor
+library(tidyverse)
+library(janitor)
+
+
+```
+
 ## Load Data
 
 For this exercise, we will be working with a small subset of the DEA's ARCOS database, which documented shipments of 76 billion opioid pills between 2006 and 2012, during the peak of the opioid epidemic. We will be working with a subset of shipments to Baltimore City, Maryland.  
@@ -69,13 +80,32 @@ There is one record (row or observation) per transaction (a shipment from a manu
 
 **Task**: Create a code block below, and write and execute the function to load in the data of shipments to Baltimore City, Maryland and store it as an object called baltimore. Write a comment describing what you are doing.  
 
+```{r}
+# load data fr Baltimore City
+baltimore <- read_tsv("data/arcos-md-baltimore-city-24510-itemized.tsv")
+```
 ## Examine the Data
 
 Now that the data is in, spend some time examining it.
 
 **Task**: Create a code block below, and write and execute a function to open and view the spreadsheet in a new window tab that you can examine.  In that browser window, use your mouse to sort by a handful of columns, highest to lowest and lowest to highest.  In that browser window, practice turning on filters with your mouse to examine a subset of the data.    
 
+```{r}
+# view the data
+# view(baltimore)
+```
+
 **Task**: Create a code block below and use the glimpse and summary function to examine the shape of the data. Answer each of the following questions in a comment inside the code block:
+
+```{r}
+glimpse(baltimore)
+
+# the data has 42 columns and 290,908 rows
+
+# the columns "buyer_zip" and "reporter_zip" probably doesn't need to be stored as a <dbl> because we'd never calculate data from it. 
+
+# they are represented as "null"
+```
 * How many rows does the data have? How many columns?   
 * Each column is stored in one of two formats: "chr", or strings of characters, generally used for text; and "dbl", a number format on which mathematical operations can be performed.  Do you see any examples of a column stored as a "dbl" that doesn't really need to be, because we would never do math on it? Are there any columns stored as character that you think should be stored in another format entirely?
 * Based on the information here, how are missing values represented in this data set?
@@ -83,25 +113,87 @@ Now that the data is in, spend some time examining it.
 ## Cleaning
 **Task**: Using the function from the janitor package we learned in the last lab, convert all of the column names to lower case.  
 
+```{r}
+baltimore <-clean_names(baltimore)
+```
+
 ## Analysis
 
 **Task**: Which single pharmacy **location** had the most pills sent to it? Produce the code to answer this question in a codeblock below. 
 
+```{r}
+baltimore %>%
+  group_by(buyer_name, buyer_address1) %>%
+    summarise(shipments = n(),
+            total_pills = sum(dosage_unit))  %>%
+  arrange(desc(total_pills))
+
+# the pharmacy that received the most pills was the Newcare Home Health Services at 3423-3425 Sinclair Lane
+
+```
+
 Hint: you'll need to group by more than just the pharmacy name to answer this question correctly.
 
 Do some quick web research/reporting.  What actions did the DEA and state of Maryland take against this pharmacy? Why did they do it? 
+```{r}
+# the state revoked the pharmacy's permits and convicted the two pharmacists were found guilty of selling 9,936,075 units of hydrocodone online using phony prescriptions; conspiracy to launder money; engaging in transactions involving the proceeds of drug sales; and filing false tax returns.
+
+# It looks like the owners of the pharmacy were convicted of selling opioids over the internet to anyone with a valid credit card. Federal prosecutors said the company filled prescriptions emailed to them that were signed by a small group of doctors who never actually saw the customers. Newcare was paid $20 for each prescription it filled.
+
+```
 
 In a comment inside the codeblock, write a paragraph (two to three sentences) that you could drop into a news story that includes the following information: Name and approximate location of the pharmacy; how many pills it received between 2006 and 2012; and a brief description of what actions the DEA and Maryland took against the pharmacy and why. 
 
+```{r}
+# The Newcare Home Health Services, located on the 3400 block of Sinclair Lane, received over 6 million opioid pills between 2006 and 2008, when the pharmacy was shut down and the two pharmacists responsible were convicted in federal courts of selling millions of pills of hydrocodone online using phony prescriptions, conspiracy to launder money, engaging in transactions involving the proceeds of drug sales, and filing false tax returns. 
+
+# The pharmacists sold opioid pills over the internet to anyone with a valid credit card. 
+```
+
 **Task**: What is the name of the distributor that was responsible for sending the most pills to Baltimore City betwen 2006 and 2012? Produce the code to answer this question in a codeblock below.  
+
+```{r}
+
+baltimore %>%
+  group_by(reporter_name, reporter_state) %>%
+    summarise(shipments = n(),
+            total_pills = sum(dosage_unit))  %>%
+  arrange(desc(total_pills))
+
+# The distributor that sent the most number of pills is the McKesson Corporation. They sent 49,834,830 pills between 2006 and 2012, and their headquarters are located in MD. 
+```
 
 In a comment inside the codeblock, write the following information: the name of the distributor; the number of pills sent between 2006 and 2012; the state where their corporate headquarters is located.   
 
 **Task**: Let's look only at shipments sent by the distributor in the answer to the previous question.  Which **single pharmacy location** recieved the most shipments from that distributor.  Produce the code to answer this question in a codeblock below.  
 
+```{r}
+
+baltimore %>%
+  group_by(reporter_name, buyer_name, buyer_address1, buyer_address2) %>%
+    summarise(shipments = n(),
+            total_pills = sum(dosage_unit))  %>%
+  arrange(desc(total_pills))
+
+# The Professional Pharmacy Service at the Sinai Hospital at 2411 West Belvedere Avenue received 6,254 shipments between 2006-2012. It's unique because it's located inside a hospital, so it serves a significantly larger population than a traditional pharmacy.
+
+```
 In a comment inside the codeblock, write the name and address of the buyer and the total number of shipments during the covered period.  What is unique about this pharmacy that might explain the high number of shipments?
 
 **Task**: Of all the pills sent to Baltimore City between 2006 and 2012, which entity had the highest percentage of all pills sent to it. Group only by the name of the pharmacy for this question. Produce your answer in a codeblock below.
+
+```{r}
+
+baltimore %>%
+ group_by(buyer_name) %>%
+  summarise(pills_per_pharmacy = sum(dosage_unit)) %>%
+  mutate(total_pills = sum(pills_per_pharmacy)) %>%
+   mutate(pharmacy_percent_total_pills = round((pills_per_pharmacy/total_pills)*100,2)) %>%
+  arrange(desc(pharmacy_percent_total_pills))
+
+# The Rite Aid of Maryland, Inc. has the highest percentage of pills sent to it. It received 12.52% of all pills, or 16,740,590 pills of the 133,721,503 pills
+
+```
 
 In a comment inside the codeblock, put the name of the entity, the percentage of pills it was responsible for, the total number of pills sent to it and the total number of pills sent to the whole city. 
 
@@ -109,14 +201,58 @@ In a comment inside the codeblock, put the name of the entity, the percentage of
 
 In a codeblock below, copy the function you wrote in your previous answer and add a filter at the end that returns only those records that have "RITE" in the name.  In a comment, explain how many different iterations of Rite Aid there are in this data set.  What prevented them from grouping correctly?  
 
-**Task**: Create a codeblock below that does the following.
+```{r}
+baltimore %>%
+  group_by(buyer_name) %>%
+  summarise(pills_per_pharmacy = sum(dosage_unit)) %>%
+  mutate(total_pills = sum(pills_per_pharmacy)) %>%
+  mutate(pharmacy_percent_total_pills = round((pills_per_pharmacy/total_pills)*100,2)) %>%
+  arrange(desc(pharmacy_percent_total_pills)) %>%
+  filter(str_detect(buyer_name, "RITE"))
 
+# there are three iterations. The name is spelled differently for each entry so it couldn't group. 
+```
+**Task**: Create a codeblock below that does the following.
 * Creates a new column in the data set called "rite_aid_y_n".  In that column, make the value say "rite_aid_y" if the buyer_name column indicates the store is a rite aid.  Make the value say "rite_aid_n" if it's not.  
 
+```{r}
+baltimore_working <- baltimore %>%
+  mutate(rite_aid_y_n = case_when(
+    str_detect(buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+    )      
+```
 * Group by the newly created column, allowing us to examine shipments to Rite Aid and shipments to everyone else.   
+
+```{r}
+baltimore %>%
+  mutate(rite_aid_y_n = case_when(
+    str_detect(buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+    ) %>% 
+group_by(rite_aid_y_n) %>%
+  summarise(pills_per_pharmacy = sum(dosage_unit)) %>%
+  mutate(total_pills = sum(pills_per_pharmacy)) %>%
+  mutate(pharmacy_percent_total_pills = round(((pills_per_pharmacy/total_pills)*100),2)) %>%
+  arrange(desc(pharmacy_percent_total_pills))         
+```
 
 * Calculates the total number of shipments to each group, the total shipments to the city as a whole, and the percentage of total shipments each group is responsible for. 
 
+```{r}
+baltimore %>%
+  mutate(rite_aid_y_n = case_when(
+    str_detect(buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+    ) %>% 
+group_by(buyer_name) %>%
+  summarise(shipments_per_group = sum(quantity)) %>%
+  mutate(total_shipments = sum(shipments_per_group)) %>%
+  mutate(pharmacy_percent_total_shipments = round(((shipments_per_group/total_shipments)*100),2)) %>%
+  arrange(desc(buyer_name))
+
+# i think this is wrong but i'm not sure how to calculate shipments from this list since i was under the impression shipments was "quantity"  so I think there were 1015276 shipments to Baltimore City total
+```
 In a comment inside the codeblock, explain how many total shipments there were to the city, how many and what percentage went to Rite Aid stores. 
 
 **Task**: Create a summary table with the following information:
@@ -126,15 +262,140 @@ In a comment inside the codeblock, explain how many total shipments there were t
 * The following summary stats: total shipments, total pills, average pills per shipment, largest shipment (in terms of pills).
 * Sort by different summary columns.  
 
+```{r}
+
+baltimore %>%
+  select(combined_labeler_name, reporter_name, buyer_name) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--")
+
+```
+
+```{r}
+baltimore %>%
+filter(drug_name == "HYDROCODONE") %>%
+    select(combined_labeler_name, reporter_name, buyer_name, drug_name) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
+ arrange(pipeline) %>%
+  mutate(rite_aid_y_n = case_when(
+    str_detect( buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+   
+    )     
+```
+
+```{r}
+baltimore %>%
+ mutate(rite_aid_y_n = case_when(
+    str_detect( buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+    )      %>%
+  summary(group_by(drug_name))
+```
+
 In a comment, write up your findings.  What information would you use to spur additional reporting? 
+```{r}
+# i don't even understand what my findings are here except to see that the pipeline worked and i filtered it to only include hydrocodone shipments and then arranged it alphabetically so i'm feeling pretty good about it. ¯\_(ツ)_/¯ 
+```
 
 **Task**: The discovery, in the previous question, that there was at least one shipment of Hydrocodone from Actavis Pharma to Cardinal Health to NewCare Home Health Services of 48,000 pills prompts you to want to learn more.  On what date did this transactions take place? Write the code you'd use in a codeblock below. In a comment, put the date.
+
+```{r}
+baltimore_pipeline <- baltimore %>%
+filter(drug_name == "HYDROCODONE") %>%
+    select(combined_labeler_name, reporter_name, buyer_name, drug_name, transaction_date, dosage_unit) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
+ arrange(pipeline) %>%
+  mutate(rite_aid_y_n = case_when(
+    str_detect( buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+    ) 
+
+```
+
+```{r}
+baltimore_pipeline <- baltimore %>%
+filter(drug_name == "HYDROCODONE") %>%
+    select(combined_labeler_name, reporter_name, buyer_name, drug_name, transaction_date, dosage_unit) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
+  filter(dosage_unit > 40000) %>%
+ arrange(transaction_date) %>%
+  mutate(rite_aid_y_n = case_when(
+    str_detect( buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+    ) 
+
+# date is March 21, 2006
+```
 
 ## Further analysis
 
 **Task**: Based on your initial analysis, NewCare Home Health Services seems worthy of additional digging.  You set out to learn as much as you can about their patterns.  Use everything you've learned to get at these or other questions:What were their buying patterns like?  Did they concentrate on buying certain kinds of pills? Were they buying greater numbers of high dose opioids, compared to others? Who made most of the pills they got?  Who distributed them?
 
+```{r}
+baltimore_newcare <- baltimore %>%
+filter(buyer_name == "NEWCARE HOME HEALTH SERVICES") %>%
+    select(combined_labeler_name, reporter_name, buyer_name, drug_name, transaction_date, dosage_unit) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
+ arrange(transaction_date) %>%
+  mutate(rite_aid_y_n = case_when(
+    str_detect( buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+    ) 
+
+# Newcare only purchased (from this dataset) between January 1, 2006, and October 20, 2006. A majority of their orders were larger than 1000 pills, and almost all hydrocodone. They purchased significantly greater numbers than other pharmacies, and almost all of their shipments came from Activis. 
+```
+
 Create four separate codeblocks below. Ask and answer at least four separate questions.  
+
+```{r}
+# what is the date of Newcare Home Health's smallest shipment? 
+
+baltimore_newcare <- baltimore %>%
+filter(buyer_name == "NEWCARE HOME HEALTH SERVICES") %>%
+    select(combined_labeler_name, reporter_name, buyer_name, drug_name, transaction_date, dosage_unit) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
+ arrange(dosage_unit) %>%
+  mutate(rite_aid_y_n = case_when(
+    str_detect( buyer_name, "RITE") ~ "rite_aid_y", 
+    TRUE ~ "rite_aid_n")
+    ) 
+
+# they had a series of shipments of 100 pills each, but the first to show up was on March 31, 2006. 
+```
+
+```{r}
+# which zip code received the largest shipment of pills that were made by Actavis? 
+baltimore_questions <- baltimore %>%
+  filter(combined_labeler_name == "Actavis Pharma, Inc.") %>%
+   select(combined_labeler_name, reporter_name, buyer_name, drug_name, transaction_date, dosage_unit, buyer_zip) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
+ arrange(dosage_unit)
+
+# the zip code of the largest shipment of pills made by Actavis was	21213
+```
+
+```{r}
+# what combo is the smallest shipment from the pipeline into baltimore? 
+
+baltimore_questions <- baltimore %>%
+  select(combined_labeler_name, reporter_name, buyer_name, dosage_unit) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--")
+
+# The pipeline was Exeltis USA, Inc.--EVERETT LABORATORIES--BOUSEL, DONALD P MD. They received 4 pills. 
+```
+
+```{r}
+# what combo is responsible for the largest shipment that doesn't include the Newcare Home Health Services?
+
+baltimore_question4 <- baltimore %>%
+    select(combined_labeler_name, reporter_name, buyer_name, dosage_unit) %>%
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
+ arrange(dosage_unit)
+
+# The largest shipment to a pipeline that wasn't to NHHS was to HMIS- they received a shipment of 40,000 pills. SpecGx LLC--OMNICARE DISTRIBUTION CENTER LLC--HMIS	
+    
+
+```
 
 ## Output
 
