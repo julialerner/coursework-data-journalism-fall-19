@@ -61,6 +61,8 @@ Run this:
 ```{r}
 # If you don't have one or both of these these, use install.packages()
 
+# install.packages("arcos")
+
 # install.packages('arcos')
 library(tidyverse)
 library(janitor)
@@ -145,9 +147,78 @@ Caution: do NOT use the raw_data() function, it will almost certainly crash your
 
 ## Analysis
 
+```{r}
+# load county data for Licking, OH
+county_raw(county= "Licking", state="OH", key=key)
+```
+
+
+```{r}
+# load total pharmacy data for Licking, OH and for all of OH
+
+total_pharmacies_county(county= "Licking", state="OH", key=key) 
+```
+
+
+```{r}
+# load summary of licking county annual 
+
+summarized_county_annual(county="Licking", state="OH", key=key)
+```
+
 **Task** Use the rest of class to start doing exploratory queries for your data analysis project.  Do at least 5 queries to get started. I'll come around and talk to you about your ideas.  
 
 ## Output
+
+```{r}
+# get a summary for pills sent to licking county 2006-2012 
+summary(summarized_county_annual(county="Licking", state="OH", key=key))
+
+# calculate the sum of pills sent to licking co 206-2012
+summarized_licking_totals <- summarized_county_annual(county="Licking", state= "OH", key=key) %>%
+    summarize(total_pills = sum(DOSAGE_UNIT))  
+
+```
+
+```{r}
+# how many pharmacies in Ohio received more than 100,000 pills between 2006 and 2012? 
+ohio_pharmacies_over10k <- total_pharmacies_state(state="OH", key=key)
+
+ohio_pharmacies_over10k %>% 
+  select(buyer_name, buyer_county, total_dosage_unit) %>%
+  arrange(desc(total_dosage_unit)) %>%
+  filter(total_dosage_unit > 100000)
+```
+
+```{r}
+# which county in ohio received the most pills?
+# butler county received the most. 
+ohio_pharmacies_most <- total_pharmacies_state(state="OH", key=key) %>%
+  select(buyer_county, total_dosage_unit) %>%
+  arrange(desc(total_dosage_unit))
+
+# which pharmacy in butler county received the most? Where is it located? 
+ohio_pharmacies_most <- total_pharmacies_state(state="OH", key=key) %>%
+  select(buyer_name, buyer_county, total_dosage_unit) %>%
+  filter(buyer_county=="BUTLER") %>%
+  arrange(desc(total_dosage_unit)) 
+
+#humana pharmacy in Butler received the most pills- they received 28,192,220 pills between 2006 and 2012. 
+
+```
+
+```{r}
+# what is the rate of pills in ohio? meaning how many pills per person for state of ohio 
+# load ohio population data and then divide by total number of pills which we found earlier. 
+
+# in 2012, population = 11533561	and pills = 6289460
+
+# 11533561/6289460 = 1.83379193126 so there were two pills per person in the state of ohio in 2012. 
+
+state_population(state="OH", key=key)
+
+
+```
 
 **Task**: Spellcheck your document in R Studio.  Save your file.  Knit it to an HTML document, making sure it compiles.  Open it in a browser to be sure. Push your changes to GitHub, and go to GitHub.com to make sure your changes got up to the browser.
 
