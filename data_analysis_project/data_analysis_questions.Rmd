@@ -1,0 +1,144 @@
+---
+title: "Data Analysis Big Questions"
+author: "Julia Lerner"
+date: "11/03/2019"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+
+```{r}
+# installing and loading packages that i might need
+#install.packages("tidycensus")
+#install.packages("rgdal")
+#install.packages("rgdal")
+#install.packages("tidyverse")
+#install.packages("arcos")
+#install.packages("scales")
+# install.packages("ggrepel")
+#library(tidyverse)
+#library(janitor)
+#library(arcos)
+#library(scales)
+#library(ggrepel)
+#library(tidycensus)
+
+```
+
+```{r}
+# load data fr buyer address, buyer totals, buyer annual by year, and state population per year
+buyer_address <- read_csv("data/buyer_addresses.csv")
+buyer_annual_by_year <- read_csv("data/buyer_annual_by_year.csv")
+buyer_totals <- read_csv("data/buyer_totals.csv")
+state_population_per_year <- read_csv("data/state_population_per_year.csv")
+babies_per <- read_csv("data/delivery_hospitalizations.csv")
+children_in_foster_care <- read_csv("data/children_in_foster_care.csv")
+```
+
+
+```{r}
+# motivating questions!
+# How many children (especially in states with high-opioid addiction rates) have gone into foster care in the years 2006-2012? 
+# What is the rate of children taken from homes due to opioid addiction? 
+# How many children are born addicted to opiates? 
+# do states with higher rates of pills per person have higher foster care costs?
+# what does it cost to help a baby get clean from opiates?
+# how many children are in the foster care system nationally? per state?
+# do states with higher rates of opioid use have higher rates of children in state care? 
+# what percent of each state is actually housed in state care/foster system? 
+# how has the rate of children in foster care in each state changed between 2006-2012?
+# what percent of the US population lives in foster care/state care?
+# Of the children seized from their parents, what percent was due to drug abuse? specifically opioids?
+# if there are more overdose deaths in a state, are rates of children in fostercare higher?
+# does the rate of babies born addicted rise with the number of pills sent to each state?
+
+```
+
+```{r}
+# How many children (especially in states with high-opioid addiction rates) have gone into foster care in the years 2006-2012? 
+# this is for nationwide, how many childen are in foster care for 2006-2012. 
+children_in_foster <- children_in_foster_care %>%
+  filter(TimeFrame %in% c("2006", "2007", "2008", "2009", "2010", "2011", "2012") & Location=="United States")
+
+# now lets focus in on a particular state. According to the National Inpatient Sample and State Inpatient Database, Healthcare Cost and Utilization Project info, Vermont has the highest rate of change in babies per 1000 born addicted to opioids. Let's start there. 
+```
+
+```{r}
+#How many children are in Vermont's foster system in the years 2006-2012?
+children_in_VTfoster_2006 <- children_in_foster_care %>%
+  filter(TimeFrame %in% c("2006", "2007", "2008", "2009", "2010", "2011", "2012") & Location=="Vermont") %>%
+  rename(year = TimeFrame) %>%
+  rename(total_kids = Data)
+```
+
+```{r}
+# and how many pills were sent to vermont in this time frame? 
+buyer_annual_year_VT <- buyer_annual_by_year %>%
+  rename(State = buyer_state) %>%
+  filter(State =="VT") %>%
+  group_by(year, State) %>%
+  summarise(shipments = n(),
+            total_pills = sum(dosage_unit))
+
+```
+
+```{r}
+
+# the highest number of pills by year ws in 2009. was that also the year with the highest number of children in the system? 
+
+kids_and_pills <- buyer_annual_year_VT %>%
+  right_join(children_in_VTfoster_2006, by="year") %>%
+  select(year, total_pills, Location, total_kids) %>%
+  arrange(desc(year))
+
+# interestingly the highest population of children in foster care was in 2006, when there were 1,379 kids in foster care. In 2009, when 20,783,165 pills flooded VT, there were only 1062 kids in foster care. 
+
+```
+
+```{r}
+# okay but how percent of people in vermont were in foster care in this time frame?
+rate_of_VT <-state_population_per_year %>%
+  rename(Location = buyer_state) %>%
+  filter(str_detect(Location, "VT"))
+
+children_UPDATED<- children_in_foster_care %>%
+  rename(total = Data)
+
+children_UPDATED %>%
+  full_join(rate_of_VT) %>%
+  select(Location, total, TimeFrame, population_average) %>% 
+  filter(Location %in% c("Vermont", "VT"))
+
+# i have been working for over an hour on trying to figure out how to get VT and Vermont to register as the same thing in this chart and i just can't figure it out so i am MOVING ON NOW. 
+
+# VT_foster_care <- children_in_foster_care %>%
+  #filter(Location =="Vermont") %>%
+  #right_join(state_population_per_year, by="")
+
+```
+
+```{r}
+# how many pills per person were sent to vermont in this time frame? 
+```
+
+
+
+
+
+
+
+
+
+
+
+
