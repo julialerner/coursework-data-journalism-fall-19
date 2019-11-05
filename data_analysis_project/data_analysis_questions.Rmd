@@ -26,12 +26,21 @@ The preview shows you a rendered HTML copy of the contents of the editor. Conseq
 #install.packages("arcos")
 #install.packages("scales")
 # install.packages("ggrepel")
-#library(tidyverse)
-#library(janitor)
-#library(arcos)
-#library(scales)
-#library(ggrepel)
-#library(tidycensus)
+library(tidyverse)
+library(janitor)
+library(arcos)
+library(scales)
+library(ggrepel)
+library(tidycensus)
+
+```
+
+```{r}
+# store one of our API keys as an object called key
+key <- "uO4EK6I"
+
+arcos_county_pills_per_year <- summarized_county_annual(key = key) %>%
+  clean_names()
 
 ```
 
@@ -86,10 +95,15 @@ children_in_VTfoster_2006 <- children_in_foster_care %>%
 buyer_annual_year_VT <- buyer_annual_by_year %>%
   rename(State = buyer_state) %>%
   filter(State =="VT") %>%
+  mutate(State = "Vermont") %>%
   group_by(year, State) %>%
   summarise(shipments = n(),
-            total_pills = sum(dosage_unit))
+            total_pills = sum(dosage_unit)) 
+```
 
+```{r}
+state_population_per_year_UPDATE <- state_population_per_year %>%
+  rename(state = buyer_state)
 ```
 
 ```{r}
@@ -97,9 +111,13 @@ buyer_annual_year_VT <- buyer_annual_by_year %>%
 # the highest number of pills by year ws in 2009. was that also the year with the highest number of children in the system? 
 
 kids_and_pills <- buyer_annual_year_VT %>%
-  right_join(children_in_VTfoster_2006, by="year") %>%
+  inner_join(children_in_VTfoster_2006, by="year") %>%
   select(year, total_pills, Location, total_kids) %>%
-  arrange(desc(year))
+  arrange(desc(year)) %>%
+  rename(state = Location)
+
+kids_and_pills_and_pop <- kids_and_pills %>%
+  full_join(state_population_per_year_UPDATE, by="state")
 
 # interestingly the highest population of children in foster care was in 2006, when there were 1,379 kids in foster care. In 2009, when 20,783,165 pills flooded VT, there were only 1062 kids in foster care. 
 
@@ -129,6 +147,18 @@ children_UPDATED %>%
 
 ```{r}
 # how many pills per person were sent to vermont in this time frame? 
+```
+
+```{r}
+
+# I am just so lost and feeling very frustrated. 
+
+#how many pills went to vermont in 2006? 
+VT_pills_2006 <- arcos_county_pills_per_year %>%
+  filter(buyer_state == "VT", year == "2006") %>%
+  select(year, dosage_unit) %>%
+  summarise(shipments = n(),
+            total_pills = sum(dosage_unit)) 
 ```
 
 
