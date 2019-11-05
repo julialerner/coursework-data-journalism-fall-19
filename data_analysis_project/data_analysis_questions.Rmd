@@ -42,6 +42,10 @@ key <- "uO4EK6I"
 arcos_county_pills_per_year <- summarized_county_annual(key = key) %>%
   clean_names()
 
+arcos_buyer_yearly <- combined_buyer_annual(key=key) %>%
+  clean_names()
+
+
 ```
 
 ```{r}
@@ -70,6 +74,7 @@ children_in_foster_care <- read_csv("data/children_in_foster_care.csv")
 # Of the children seized from their parents, what percent was due to drug abuse? specifically opioids?
 # if there are more overdose deaths in a state, are rates of children in fostercare higher?
 # does the rate of babies born addicted rise with the number of pills sent to each state?
+# why is vermont's rate of children born addicted so high, since it's not in the rust belt?
 
 ```
 
@@ -125,6 +130,27 @@ kids_and_pills_and_pop <- kids_and_pills %>%
 
 ```{r}
 # okay but how percent of people in vermont were in foster care in this time frame?
+# to do this I need to combine the data set of state population with the number of children in foster care. I need to get VT to equal Vermont, and then i need to create a new column that divides the foster number by the state total population per year. 
+
+state_population_per_year_UPDATE <- state_population_per_year_UPDATE %>%
+  #rename(Location = state) %>%
+  filter(Location=="VT") %>%
+  mutate(Location="Vermont") 
+ # mutate(VT=="Vermont")
+
+kids_and_pop <- children_in_VTfoster_2006 %>%
+  full_join(state_population_per_year_UPDATE, by ="Location") %>%
+  filter(Location=="Vermont") %>%
+  mutate(total_kids = as.numeric(total_kids)) %>%
+  mutate(rate = (total_kids/population_average)*10000)
+
+glimpse(kids_and_pop)
+
+
+
+
+
+
 rate_of_VT <-state_population_per_year %>%
   rename(Location = buyer_state) %>%
   filter(str_detect(Location, "VT"))
@@ -146,19 +172,34 @@ children_UPDATED %>%
 ```
 
 ```{r}
-# how many pills per person were sent to vermont in this time frame? 
+# i want to find the rate of pills per person in vermont. to do this, i need to find the total pills per year, the population per year, and compare the two. 
 ```
 
 ```{r}
+#how many pills went to vermont in 2006-2012? how many pills per person were sent to vermont in this time frame? 
 
-# I am just so lost and feeling very frustrated. 
+buyer_totals_vt <- buyer_totals %>%
+ inner_join(state_population_per_year, by="buyer_state") %>%
+ group_by(buyer_state, population_average) %>%
+ summarise(total_pills_by_state = sum(total_pills)) %>%
+ mutate(rate = total_pills_by_state/population_average) %>%
+ arrange(desc(rate)) %>%
+  filter(buyer_state =="VT")
 
-#how many pills went to vermont in 2006? 
-VT_pills_2006 <- arcos_county_pills_per_year %>%
-  filter(buyer_state == "VT", year == "2006") %>%
-  select(year, dosage_unit) %>%
-  summarise(shipments = n(),
-            total_pills = sum(dosage_unit)) 
+# total number of pills: 
+# rate per person = 197.8865
+
+arcos_buyer_yearly %>%
+  group_by(year) %>%
+  filter(buyer_state=="VT") %>%
+  arrange(year) %>%
+  summarise(total_pills = sum(dosage_unit)) 
+
+pills_and_pop <- state_population_per_year %>%
+  full_join(arcos_buyer_yearly, by ="buyer_state") %>%
+  filter(buyer_state=="VT") %>%
+  summarise(total_pills = sum(dosage_unit)) 
+
 ```
 
 
