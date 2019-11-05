@@ -202,11 +202,11 @@ buyer_totals %>%
 ```{r}
 # You basically do everything you just did but reverse. 
 
-buyer_addresses_not_totals <- buyer_address %>%
-  inner_join(buyer_totals, by="buyer_dea_no")
+#buyer_addresses_not_totals <- buyer_address %>%
+  # inner_join(buyer_totals, by="buyer_dea_no")
 
-buyer_addresses_not_totals_left <- buyer_address %>%
-  left_join(buyer_totals, by="buyer_dea_no")
+# buyer_addresses_not_totals_left <- buyer_address %>%
+#  left_join(buyer_totals, by="buyer_dea_no")
 
 buyer_addresses_filtered <- buyer_address %>%
   anti_join(buyer_totals, by="buyer_dea_no")

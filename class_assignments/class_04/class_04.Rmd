@@ -265,22 +265,25 @@ In a comment inside the codeblock, explain how many total shipments there were t
 ```{r}
 
 baltimore %>%
-  select(combined_labeler_name, reporter_name, buyer_name) %>%
-  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--")
+  unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
+  group_by(pipeline) %>%
+  summarise(count = n(),
+            total_pills = sum(dosage_unit), 
+            average_pills = mean(dosage_unit),
+            max_pills = max(dosage_unit)
+            ) %>%
+  mutate(average_2 = total_pills/count) %>%
+  arrange(desc(max_pills))
+  
 
 ```
 
 ```{r}
 baltimore %>%
 filter(drug_name == "HYDROCODONE") %>%
-    select(combined_labeler_name, reporter_name, buyer_name, drug_name) %>%
+  select(combined_labeler_name, reporter_name, buyer_name, drug_name) %>%
   unite(pipeline, combined_labeler_name, reporter_name, buyer_name, remove = 'F', sep="--") %>%
- arrange(pipeline) %>%
-  mutate(rite_aid_y_n = case_when(
-    str_detect( buyer_name, "RITE") ~ "rite_aid_y", 
-    TRUE ~ "rite_aid_n")
-   
-    )     
+  
 ```
 
 ```{r}
