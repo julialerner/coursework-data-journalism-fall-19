@@ -22,7 +22,7 @@ The preview shows you a rendered HTML copy of the contents of the editor. Conseq
 #install.packages("tidycensus")
 #install.packages("rgdal")
 #install.packages("rgdal")
-#install.packages("tidyverse")
+install.packages("tidyverse")
 #install.packages("arcos")
 #install.packages("scales")
 # install.packages("ggrepel")
@@ -144,24 +144,28 @@ kids_and_pop <- children_in_VTfoster_2006 %>%
   mutate(total_kids = as.numeric(total_kids)) %>%
   mutate(rate = (total_kids/population_average)*10000)
 
-glimpse(kids_and_pop)
+# now lets build a chart that visualizes this. 
 
+ggplot(kids_and_pop) +
+  geom_bar(stat="identity", aes(year, rate), fill="navy") +
+  labs(x="year", y="rate of foster children per 10,000 in Vermont", title="In Vermont, the number of foster children per 10,000 in Vermont fell between 2006 and 2010", subtitle = "After 2010, the number of foster children began to rise", caption = "Source: Census data") +
+  scale_x_continuous(breaks = c(2006, 2007, 2008, 2009, 2010, 2011, 2012)) +
+  scale_y_continuous(labels = comma)
+```
 
+```{r}
+ # just ignore all of this it means absolutely nothing. okay cool thanks. 
+# rate_of_VT <-state_population_per_year %>%
+#  rename(Location = buyer_state) %>%
+#  filter(str_detect(Location, "VT"))
 
+#children_UPDATED<- children_in_foster_care %>%
+#  rename(total = Data)
 
-
-
-rate_of_VT <-state_population_per_year %>%
-  rename(Location = buyer_state) %>%
-  filter(str_detect(Location, "VT"))
-
-children_UPDATED<- children_in_foster_care %>%
-  rename(total = Data)
-
-children_UPDATED %>%
-  full_join(rate_of_VT) %>%
-  select(Location, total, TimeFrame, population_average) %>% 
-  filter(Location %in% c("Vermont", "VT"))
+#children_UPDATED %>%
+ # full_join(rate_of_VT) %>%
+#  select(Location, total, TimeFrame, population_average) %>% 
+#  filter(Location %in% c("Vermont", "VT"))
 
 # i have been working for over an hour on trying to figure out how to get VT and Vermont to register as the same thing in this chart and i just can't figure it out so i am MOVING ON NOW. 
 
@@ -186,9 +190,32 @@ buyer_totals_vt <- buyer_totals %>%
  arrange(desc(rate)) %>%
   filter(buyer_state =="VT")
 
-# total number of pills: 
+# total number of pills: 123414703
 # rate per person = 197.8865
+ 
+# now lets make another chart! this time i am thinkin a line graph 
 
+ggplot(buyer_totals_vt) +
+  geom_point(aes())
+
+
+
+
+
+#ggplot(md_county_pills_population_income_2012) +
+#  geom_point(aes(estimate, pills_per_person)) +
+#  geom_smooth(aes(estimate, pills_per_person), method = "lm", se = FALSE)  +
+#  scale_y_continuous(labels = comma) +
+#  scale_x_continuous(labels = comma)  +
+ # theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#  geom_text_repel(aes(estimate, pills_per_person, label=buyer_county),
+#                  subset(md_county_pills_population_income_2012)) +
+#  labs(x="2012 median household income", y="2012 pills per person", title="Less well off counties tend have higher opioid rate, but there are exceptions", caption = "Source: DEA ARCOS database, via Washington Post")
+
+
+```
+
+```{r}
 arcos_buyer_yearly %>%
   group_by(year) %>%
   filter(buyer_state=="VT") %>%
@@ -199,6 +226,29 @@ pills_and_pop <- state_population_per_year %>%
   full_join(arcos_buyer_yearly, by ="buyer_state") %>%
   filter(buyer_state=="VT") %>%
   summarise(total_pills = sum(dosage_unit)) 
+
+
+
+
+state_population_per_year_UPDATE <- state_population_per_year_UPDATE %>%
+  #rename(Location = state) %>%
+  filter(Location=="VT") %>%
+  mutate(Location="Vermont") 
+ # mutate(VT=="Vermont")
+
+kids_and_pop <- children_in_VTfoster_2006 %>%
+  full_join(state_population_per_year_UPDATE, by ="Location") %>%
+  filter(Location=="Vermont") %>%
+  mutate(total_kids = as.numeric(total_kids)) %>%
+  mutate(rate = (total_kids/population_average)*10000)
+
+# now lets build a chart that visualizes this. 
+
+ggplot(kids_and_pop) +
+  geom_bar(stat="identity", aes(year, rate), fill="navy") +
+  labs(x="year", y="rate of foster children per 10,000 in Vermont", title="In Vermont, the number of foster children per 10,000 in Vermont fell between 2006 and 2010", subtitle = "After 2010, the number of foster children began to rise", caption = "Source: Census data") +
+  scale_x_continuous(breaks = c(2006, 2007, 2008, 2009, 2010, 2011, 2012)) +
+  scale_y_continuous(labels = comma)
 
 ```
 
