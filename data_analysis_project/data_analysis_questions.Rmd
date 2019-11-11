@@ -22,16 +22,20 @@ The preview shows you a rendered HTML copy of the contents of the editor. Conseq
 #install.packages("tidycensus")
 #install.packages("rgdal")
 #install.packages("rgdal")
-install.packages("tidyverse")
+#install.packages("tidyverse")
 #install.packages("arcos")
 #install.packages("scales")
-# install.packages("ggrepel")
+#install.packages("ggrepel")
+install.packages("mapview")
+install.packages("ggthemes")
 library(tidyverse)
 library(janitor)
 library(arcos)
 library(scales)
 library(ggrepel)
 library(tidycensus)
+library(mapview)
+library(ggthemes)
 
 ```
 
@@ -133,7 +137,7 @@ kids_and_pills_and_pop <- kids_and_pills %>%
 # to do this I need to combine the data set of state population with the number of children in foster care. I need to get VT to equal Vermont, and then i need to create a new column that divides the foster number by the state total population per year. 
 
 state_population_per_year_UPDATE <- state_population_per_year_UPDATE %>%
-  #rename(Location = state) %>%
+  rename(Location = state) %>%
   filter(Location=="VT") %>%
   mutate(Location="Vermont") 
  # mutate(VT=="Vermont")
@@ -148,7 +152,7 @@ kids_and_pop <- children_in_VTfoster_2006 %>%
 
 ggplot(kids_and_pop) +
   geom_bar(stat="identity", aes(year, rate), fill="navy") +
-  labs(x="year", y="rate of foster children per 10,000 in Vermont", title="In Vermont, the number of foster children per 10,000 in Vermont fell between 2006 and 2010", subtitle = "After 2010, the number of foster children began to rise", caption = "Source: Census data") +
+  labs(x="year", y="rate of foster children per 10,000 in Vermont", title="In Vermont, the number of foster children per 10,000 in Vermont fell starting in 2006", subtitle = "After 2010, the number of foster children began to rise", caption = "Source: Census data") +
   scale_x_continuous(breaks = c(2006, 2007, 2008, 2009, 2010, 2011, 2012)) +
   scale_y_continuous(labels = comma)
 ```
@@ -181,75 +185,194 @@ ggplot(kids_and_pop) +
 
 ```{r}
 #how many pills went to vermont in 2006-2012? how many pills per person were sent to vermont in this time frame? 
+buyer_annual_year_VT <- buyer_annual_year_VT %>%
+  clean_names() %>%
+  glimpse
 
-buyer_totals_vt <- buyer_totals %>%
- inner_join(state_population_per_year, by="buyer_state") %>%
- group_by(buyer_state, population_average) %>%
- summarise(total_pills_by_state = sum(total_pills)) %>%
- mutate(rate = total_pills_by_state/population_average) %>%
+
+state_population_per_year_UPDATE <- state_population_per_year_UPDATE%>%
+  rename(state=Location) %>%
+  glimpse
+
+
+buyer_totals_vt <- buyer_annual_year_VT %>%
+ inner_join(state_population_per_year_UPDATE, by="state") %>%
+ group_by(state, population_average) %>%
+ mutate(rate = total_pills/population_average) %>%
  arrange(desc(rate)) %>%
-  filter(buyer_state =="VT")
+  filter(state =="Vermont")
+
 
 # total number of pills: 123414703
-# rate per person = 197.8865
+# rate per person = 197.8865 TOTAL
+#rate per year varies
  
-# now lets make another chart! this time i am thinkin a line graph 
+# I'd like to make a chart showing the relationship between population and pills in the state. Let's make a bar graph of total population per year and then a line that shows the rate of pills per year 
 
 ggplot(buyer_totals_vt) +
-  geom_point(aes())
-
-
-
-
-
-#ggplot(md_county_pills_population_income_2012) +
-#  geom_point(aes(estimate, pills_per_person)) +
-#  geom_smooth(aes(estimate, pills_per_person), method = "lm", se = FALSE)  +
-#  scale_y_continuous(labels = comma) +
-#  scale_x_continuous(labels = comma)  +
- # theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-#  geom_text_repel(aes(estimate, pills_per_person, label=buyer_county),
-#                  subset(md_county_pills_population_income_2012)) +
-#  labs(x="2012 median household income", y="2012 pills per person", title="Less well off counties tend have higher opioid rate, but there are exceptions", caption = "Source: DEA ARCOS database, via Washington Post")
-
+  geom_bar(stat="identity", aes(year, rate), fill="black") +
+  labs(x="year", y="pills per person", title="In Vermont, the rate of pills per person peaked in 2009", subtitle = "In 2010, the number of pills per person began to fall", caption = "Source: Census data") +
+  scale_x_continuous(breaks = c(2006, 2007, 2008, 2009, 2010, 2011, 2012)) +
+  scale_y_continuous(labels = comma)
 
 ```
 
 ```{r}
-arcos_buyer_yearly %>%
-  group_by(year) %>%
-  filter(buyer_state=="VT") %>%
-  arrange(year) %>%
-  summarise(total_pills = sum(dosage_unit)) 
-
-pills_and_pop <- state_population_per_year %>%
-  full_join(arcos_buyer_yearly, by ="buyer_state") %>%
-  filter(buyer_state=="VT") %>%
-  summarise(total_pills = sum(dosage_unit)) 
+ # okay it lowkey has taken me days to get to this point and i am so excited that I did would you LOOK at that MASTERPIECE of a graph up there !!!!!!!
+```
 
 
+```{r}
+# this is the data to load the map below 
+# Define API Key
+census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
+
+# If you need to look up variables, this is how you do it
+acs_variables <- load_variables(2017, "acs5" )
+
+county_geodata <- get_acs(geography = "county",
+              variables = "B01001_001", geometry = TRUE)
+
+state_geodata <- get_acs(geography = "state",
+              variables = "B01001_001", geometry = TRUE)
+
+```
 
 
-state_population_per_year_UPDATE <- state_population_per_year_UPDATE %>%
-  #rename(Location = state) %>%
-  filter(Location=="VT") %>%
-  mutate(Location="Vermont") 
- # mutate(VT=="Vermont")
+```{r}
+# what's next? Let's look at children in foster care nationally
+# let's make a sheet that just shows nuber of childrn in foster care, and then make one of those super cool US maps to show it off by year. 
 
-kids_and_pop <- children_in_VTfoster_2006 %>%
-  full_join(state_population_per_year_UPDATE, by ="Location") %>%
-  filter(Location=="Vermont") %>%
+# turn off scientific notation 
+options(scipen=999)
+# this is the sheet that the map will pull the data from. 
+children_in_foster_care_STATES <- children_in_foster_care %>%
+  filter(LocationType =="State") %>%
+  rename(total_kids = Data) %>%
+  rename(year=TimeFrame) %>%
+  rename(state = Location)
+
+# do I combine this with the arcos map data? let's try loading that data separately
+
+state_geodata <- get_acs(geography = "state",
+    variables = "B01001_001", geometry = TRUE) %>%
+  rename(state = NAME)
+
+# now let's do a full join of foster care data and state shapes
+
+state_foster_pops <- children_in_foster_care_STATES %>%
+  full_join(state_geodata, by="state") %>%
+  filter(year=="2006")
+  select(state, variable, geometry, total_kids, year, estimate)
+
+# and this is the map 
+
+state_foster_pops %>%
+  ggplot(aes(fill = total_kids)) +
+  geom_sf()
+
+state_foster_pops %>%
+  ggplot(aes(fill = total_kids)) +
+  geom_sf(lwd = 0) +
+  theme_map() +
+  labs(fill='Population',title="California, Texas have largest populations", subtitle = "2017 population, U.S. Census", caption = "Source: U.S. Census ACS") +
+  scale_fill_continuous(labels = comma) +
+  theme(legend.position="right")
+# i can't figure this out. it just keeps telling me that "Error: stat_sf requires the following missing aesthetics: geometry" so let's just move on and I will ask sean on Monday. 
+
+```
+```{r}
+# how many counties in the U.S. received more than 250,000 pills between 2006 and 2012? 
+
+arcos_county_pills_per_year <- summarized_county_annual(key = key)
+
+US_pharmacies_over250k <- arcos_county_pills_per_year %>%
+  select(BUYER_STATE, BUYER_COUNTY, DOSAGE_UNIT, year) %>%
+  arrange(desc(DOSAGE_UNIT)) %>%
+  filter(DOSAGE_UNIT > 250000)
+
+# there are 17,000 counties that received more than that. what if we filter by just vermont? 
+
+
+vt_pharmacies_over250k <- arcos_county_pills_per_year %>%
+  select(BUYER_STATE, BUYER_COUNTY, DOSAGE_UNIT, year) %>%
+  arrange(desc(DOSAGE_UNIT)) %>%
+  filter(DOSAGE_UNIT > 250000) %>%
+  filter(BUYER_STATE=="VT")
+
+# there are 17,000 counties that received more than 250K. what if we filter by a bigger number? 
+
+US_pharmacies_over1m <- arcos_county_pills_per_year %>%
+  select(BUYER_STATE, BUYER_COUNTY, DOSAGE_UNIT, year) %>%
+  arrange(desc(DOSAGE_UNIT)) %>%
+  filter(DOSAGE_UNIT > 1000000)
+
+# wow there are still almost 11k options. I want to narrow it down by states that have the highest population of foster children. so let's do a glimpse of that data to decide which states to look at for the year 2006 (at the start of the crisis). 
+
+children_in_foster_care_STATES %>%
   mutate(total_kids = as.numeric(total_kids)) %>%
-  mutate(rate = (total_kids/population_average)*10000)
+  filter(year=="2006") %>%
+  arrange(desc(total_kids))
 
-# now lets build a chart that visualizes this. 
+# it looks like California, Texas, NY, Florida, Pennsylvania, Michigan, Illinois, and Ohio had the highest rates of children in foster care.  I want to look at California counties now to see if the rate of pills per foster kid is higher in california than in other states. 
 
-ggplot(kids_and_pop) +
-  geom_bar(stat="identity", aes(year, rate), fill="navy") +
-  labs(x="year", y="rate of foster children per 10,000 in Vermont", title="In Vermont, the number of foster children per 10,000 in Vermont fell between 2006 and 2010", subtitle = "After 2010, the number of foster children began to rise", caption = "Source: Census data") +
-  scale_x_continuous(breaks = c(2006, 2007, 2008, 2009, 2010, 2011, 2012)) +
-  scale_y_continuous(labels = comma)
+US_pharmacies_CA <- arcos_county_pills_per_year %>%
+  select(BUYER_STATE, BUYER_COUNTY, DOSAGE_UNIT, year) %>%
+  arrange(desc(DOSAGE_UNIT)) %>%
+  filter(BUYER_STATE=="CA", year=="2006")
 
+```
+
+```{r}
+# lets find the rate of pills per foster kid in california in 2006.
+foster_per_year_CA <- children_in_foster_care_STATES %>%
+  filter(state=="California") %>%
+   mutate(total_kids = as.numeric(total_kids)) %>%
+  glimpse
+
+buyer_yearly_CA <- arcos_buyer_yearly %>%
+  filter(buyer_state=="CA") %>%
+  mutate(buyer_state="California") %>%
+  group_by(year, buyer_state) %>%
+  summarise(shipments = n(),
+            total_pills = sum(dosage_unit)) %>%
+  rename(state=buyer_state) %>%
+  glimpse
+
+pills_foster_CA <- buyer_yearly_CA %>%
+ inner_join(foster_per_year_CA, by="year") %>%
+ #group_by(state, total_kids) %>%
+ mutate(rate = total_pills/total_kids) %>%
+ arrange(desc(rate)) 
+
+# so in California in 2006, there were 11965.49 pills per foster kid. That seems really high! What does that same number look like in Vermont?
+
+```
+
+```{r}
+foster_per_year_VT <- children_in_foster_care_STATES %>%
+  filter(state=="Vermont") %>%
+   mutate(total_kids = as.numeric(total_kids)) %>%
+  glimpse
+
+buyer_yearly_VT <- arcos_buyer_yearly %>%
+  filter(buyer_state=="VT") %>%
+  mutate(buyer_state="Vermont") %>%
+  group_by(year, buyer_state) %>%
+  summarise(shipments = n(),
+            total_pills = sum(dosage_unit)) %>%
+  rename(state=buyer_state) %>%
+  glimpse
+
+pills_foster_VT <- buyer_yearly_VT %>%
+ inner_join(foster_per_year_VT, by="year") %>%
+ #group_by(state, total_kids) %>%
+ mutate(rate = total_pills/total_kids) %>%
+ arrange(desc(rate)) 
+
+# so in the same year, there were 10674.07 pills per foster kid sent to Vermont. These numbers are pretty similar, which is kind of shocking when you consider that there were only 1379 foster kids in Vermont in 2006, and 78373 foster kids in California in 2006. 
+
+# We really seem to mostly be focusing on the rust belt for opioid data. I'm thinking someone should look at VT. ¯\_(ツ)_/¯
 ```
 
 
