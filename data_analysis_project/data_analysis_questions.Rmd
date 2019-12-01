@@ -111,8 +111,8 @@ buyer_annual_year_VT <- buyer_annual_by_year %>%
 ```
 
 ```{r}
-state_population_per_year_UPDATE <- state_population_per_year %>%
-  rename(state = buyer_state)
+state_population_per_year_UPDATE <- state_population_per_year# %>%
+ # rename(state = buyer_state)
 ```
 
 ```{r}
@@ -388,11 +388,15 @@ pills_foster_VT <- buyer_yearly_VT %>%
 #statistical test 
 
 #join pills_per_person with foster_rate_pop_VT
+state_population_per_year <- state_population_per_year %>%
+ rename(state=buyer_state)
 
+#glimpse(state_population_per_year)
 # buyer_annual_year_VT joined with state_population_per_year then mutate rate(pills per person)
 pills_per_person <- state_population_per_year %>%
   full_join(buyer_annual_year_VT, by="state") %>%
-  mutate(rate=total_pills/population_average)
+  mutate(rate=total_pills/population_average) %>%
+  filter(state=="Vermont") %>% glimpse
 # set up state population per year
 state_population_per_year <- state_population_per_year %>%
   #rename(state=buyer_state) %>%
@@ -402,9 +406,31 @@ state_population_per_year <- state_population_per_year %>%
 foster_rate_pop_VT <- children_in_foster_care_STATES %>%
   full_join(state_population_per_year, by="state") %>%
   filter(state=="Vermont") %>%
-  mutate(rate=total_kids/population_average)
+  mutate(rate=total_kids/population_average) %>%
+  filter(year>="2006") %>%
+  filter(year<="2012") %>% glimpse
 
-# ok now that you have these two data sets, you need to do a scatterplot with them. 
+# ok now that you have these two data sets, you need to do a scatterplot with them. first, inner join. then make the plot 
+
+scatter_pills_kids <- pills_per_person %>%
+  inner_join(foster_rate_pop_VT, by ="year")  %>%
+  select(state.x, year, population_average.x, total_pills, total_kids, rate.x, rate.y) %>%
+  rename(pills_per_person=rate.x) %>%
+  rename(foster_per_person=rate.y)
+
+```
+
+```{r}
+# here's the scatterplot for the foster rate and pills per person in VT
+ggplot(scatter_pills_kids) +
+  geom_point(aes(foster_per_person, pills_per_person)) +
+  geom_smooth(aes(foster_per_person, pills_per_person), method = "lm", se = FALSE)  +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(labels = comma)  +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text_repel(aes(foster_per_person, pills_per_person, label=foster_per_person),
+                  subset(scatter_pills_kids)) +
+  labs(x="fosters per person in VT", y="pills per person", title="as opioid use decreases, so do number of kids in foster care", caption = "Source: DEA ARCOS database, via Washington Post")
 ```
 
 ```{r}
