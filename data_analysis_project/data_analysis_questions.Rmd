@@ -60,6 +60,7 @@ buyer_totals <- read_csv("data/buyer_totals.csv")
 state_population_per_year <- read_csv("data/state_population_per_year.csv")
 babies_per <- read_csv("data/delivery_hospitalizations.csv")
 children_in_foster_care <- read_csv("data/children_in_foster_care.csv")
+state_population <- read_csv("data/state_population.csv")
 ```
 
 
@@ -404,11 +405,11 @@ state_population_per_year <- state_population_per_year %>%
   mutate(state="Vermont") 
 #set up population for fosters per year. 
 foster_rate_pop_VT <- children_in_foster_care_STATES %>%
-  full_join(state_population_per_year, by="state") %>%
+  full_join(state_population, by="state") %>%
   filter(state=="Vermont") %>%
-  mutate(rate=total_kids/population_average) %>%
+  mutate(rate=(total_kids/population_average)*1000) %>%
   filter(year>="2006") %>%
-  filter(year<="2012") %>% glimpse
+  filter(year<="2012") #%>% glimpse
 
 # ok now that you have these two data sets, you need to do a scatterplot with them. first, inner join. then make the plot 
 
@@ -430,16 +431,66 @@ ggplot(scatter_pills_kids) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   geom_text_repel(aes(foster_per_person, pills_per_person, label=foster_per_person),
                   subset(scatter_pills_kids)) +
-  labs(x="fosters per person in VT", y="pills per person", title="as opioid use decreases, so do number of kids in foster care", caption = "Source: DEA ARCOS database, via Washington Post")
+  labs(x="fosters per 1000 people in VT", y="pills per person", title="as opioid use decreases, so do number of kids in foster care", caption = "Source: DEA ARCOS database, via Washington Post")
 ```
+
 
 ```{r}
+# okay now i do want to do the same data but nationwide, not just focused on vermont 
+
+#set up state population per year 
+state_population <- state_population %>%
+# rename(state=buyer_state) %>%
+  #mutate(LocationType=state) %>%
+#  mutate(LocationType="State")
+
+# set up buyer data 
+buyer_annual_by_year <- buyer_annual_by_year %>%
+  #rename(state=buyer_state) %>%
+  group_by(year, state) %>%
+  summarise(shipments = n(),
+            total_pills = sum(dosage_unit))
+
+#this is the rate of pills per person per year per state
+pills_per_person_national <- state_population_per_year %>%
+  full_join(buyer_annual_by_year, by="state") %>%
+  mutate(rate=total_pills/population_average) #%>%
+ #replace(state, c(AK) c("Alaska"))
+
+# everything in pills_per_person_national looks fine, but i cant make the datasets merge well because I can't get AK to equal alaska, etc. How can I fix this?
+
+# now do the rate of foster children per person per year per state
+foster_rate_pop_national <- children_in_foster_care_STATES %>%
+  full_join(state_population, by="state") %>%
+  #filter(state=="Vermont") %>%
+  mutate(rate=(total_kids/population_average)*1000) %>%
+  filter(year>="2006") %>%
+  filter(year<="2012") #%>% glimpse
+
+#next i need to do an inner join of these two data plots, and then do a scatterplot for them. 
+
+scatter_pills_kids_national <- foster_rate_pop_national %>%
+  inner_join(pills_per_person_national, by ="year")  %>%
+ # select(state.y, year, population_average.x, total_pills, total_kids, rate.x, rate.y) %>%
+  rename(pills_per_person=rate.y) %>%
+  rename(foster_per_person=rate.x) %>%
+  filter
+
+#so that's the end dataset. Now let's do a scatterplot!
+
+ggplot(scatter_pills_kids_national) +
+  geom_point(aes(foster_per_person, pills_per_person)) +
+  geom_smooth(aes(foster_per_person, pills_per_person), method = "lm", se = FALSE)  +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(labels = comma)  +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_text_repel(aes(foster_per_person, pills_per_person, label=foster_per_person),
+                  subset(scatter_pills_kids)) +
+  labs(x="fosters per 1000 people in VT", y="pills per person", title="as opioid use decreases, so do number of kids in foster care", caption = "Source: DEA ARCOS database, via Washington Post")
 
 
-#tell kimo we are trying to understand how programs that reunite homeless people with their families are happening 
-#having specific info about where people are sent will help up
-#do you provide this data to government agencies 
 ```
+
 
 
 
