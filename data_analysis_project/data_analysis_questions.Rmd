@@ -49,7 +49,6 @@ arcos_county_pills_per_year <- summarized_county_annual(key = key) %>%
 arcos_buyer_yearly <- combined_buyer_annual(key=key) %>%
   clean_names()
 
-
 ```
 
 ```{r}
@@ -64,25 +63,6 @@ state_population <- read_csv("data/state_population.csv")
 state_names <- read_csv("data/50_us_states_all_data.csv")
 ```
 
-
-```{r}
-# motivating questions!
-# How many children (especially in states with high-opioid addiction rates) have gone into foster care in the years 2006-2012? 
-# What is the rate of children taken from homes due to opioid addiction? 
-# How many children are born addicted to opiates? 
-# do states with higher rates of pills per person have higher foster care costs?
-# what does it cost to help a baby get clean from opiates?
-# how many children are in the foster care system nationally? per state?
-# do states with higher rates of opioid use have higher rates of children in state care? 
-# what percent of each state is actually housed in state care/foster system? 
-# how has the rate of children in foster care in each state changed between 2006-2012?
-# what percent of the US population lives in foster care/state care?
-# Of the children seized from their parents, what percent was due to drug abuse? specifically opioids?
-# if there are more overdose deaths in a state, are rates of children in fostercare higher?
-# does the rate of babies born addicted rise with the number of pills sent to each state?
-# why is vermont's rate of children born addicted so high, since it's not in the rust belt?
-
-```
 
 ```{r}
 # How many children (especially in states with high-opioid addiction rates) have gone into foster care in the years 2006-2012? 
@@ -127,22 +107,18 @@ kids_and_pills <- buyer_annual_year_VT %>%
   arrange(desc(year)) %>%
   rename(state = Location)
 
-#kids_and_pills_and_pop <- kids_and_pills %>%
- # full_join(state_population_per_year_UPDATE, by="state")
-
 # interestingly the highest population of children in foster care was in 2006, when there were 1,379 kids in foster care. In 2009, when 20,783,165 pills flooded VT, there were only 1062 kids in foster care. 
 
 ```
 
 ```{r}
 # okay but how percent of people in vermont were in foster care in this time frame?
-# to do this I need to combine the data set of state population with the number of children in foster care. I need to get VT to equal Vermont, and then i need to create a new column that divides the foster number by the state total population per year. 
 
+#this is the data
 state_population_per_year_UPDATE <- state_population_per_year_UPDATE %>%
   rename(Location = state) %>%
   filter(Location=="VT") %>%
   mutate(Location="Vermont") 
- # mutate(VT=="Vermont")
 
 kids_and_pop <- children_in_VTfoster_2006 %>%
   full_join(state_population_per_year_UPDATE, by ="Location") %>%
@@ -150,39 +126,12 @@ kids_and_pop <- children_in_VTfoster_2006 %>%
   mutate(total_kids = as.numeric(total_kids)) %>%
   mutate(rate = (total_kids/population_average)*10000)
 
-# now lets build a chart that visualizes this. 
-
+# this is the chart
 ggplot(kids_and_pop) +
   geom_bar(stat="identity", aes(year, rate), fill="navy") +
   labs(x="year", y="rate of foster children per 10,000 in Vermont", title="In Vermont, the number of foster children per 10,000 in Vermont fell starting in 2006", subtitle = "After 2010, the number of foster children began to rise", caption = "Source: Census data") +
   scale_x_continuous(breaks = c(2006, 2007, 2008, 2009, 2010, 2011, 2012)) +
   scale_y_continuous(labels = comma)
-```
-
-```{r}
- # just ignore all of this it means absolutely nothing. okay cool thanks. 
-# rate_of_VT <-state_population_per_year %>%
-#  rename(Location = buyer_state) %>%
-#  filter(str_detect(Location, "VT"))
-
-#children_UPDATED<- children_in_foster_care %>%
-#  rename(total = Data)
-
-#children_UPDATED %>%
- # full_join(rate_of_VT) %>%
-#  select(Location, total, TimeFrame, population_average) %>% 
-#  filter(Location %in% c("Vermont", "VT"))
-
-# i have been working for over an hour on trying to figure out how to get VT and Vermont to register as the same thing in this chart and i just can't figure it out so i am MOVING ON NOW. 
-
-# VT_foster_care <- children_in_foster_care %>%
-  #filter(Location =="Vermont") %>%
-  #right_join(state_population_per_year, by="")
-
-```
-
-```{r}
-# i want to find the rate of pills per person in vermont. to do this, i need to find the total pills per year, the population per year, and compare the two. 
 ```
 
 ```{r}
@@ -220,11 +169,6 @@ ggplot(buyer_totals_vt) +
 ```
 
 ```{r}
- # okay it lowkey has taken me days to get to this point and i am so excited that I did would you LOOK at that MASTERPIECE of a graph up there !!!!!!!
-```
-
-
-```{r}
 # this is the data to load the map below 
 # Define API Key
 census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
@@ -240,10 +184,14 @@ state_geodata <- get_acs(geography = "state",
 
 ```
 
-
+```{r}
+children_in_foster_care_CA <- children_in_foster_care %>%
+  filter(Location=="California") %>%
+  filter(TimeFrame>="2006") %>%
+  filter(TimeFrame<="2012")
+```
 ```{r}
 # what's next? Let's look at children in foster care nationally
-# let's make a sheet that just shows nuber of childrn in foster care, and then make one of those super cool US maps to show it off by year. 
 
 # turn off scientific notation 
 options(scipen=999)
@@ -255,8 +203,7 @@ children_in_foster_care_STATES <- children_in_foster_care %>%
   rename(state = Location) %>%
   mutate(total_kids=as.numeric(total_kids))
 
-# do I combine this with the arcos map data? let's try loading that data separately
-
+#load the state geometry
 state_geodata <- get_acs(geography = "state",
     variables = "B01001_001", geometry = TRUE, shift_geo = TRUE) %>%
   rename(state = NAME) 
@@ -266,54 +213,29 @@ state_geodata <- get_acs(geography = "state",
 state_foster_pops <- state_geodata %>% 
   full_join(children_in_foster_care_STATES, by="state") %>%
 filter(year=="2006")
-#select(state, variable, geometry, total_kids, year, estimate)
 
-state_foster_pops %>%
-  glimpse
-
-# and this is the map 
-
-#state_foster_pops %>%
- # ggplot(aes(fill = total_kids)) +
-#  geom_sf()
-
+# this is the map
 state_foster_pops %>%
   ggplot(aes(fill = total_kids)) +
   geom_sf(lwd = 0) +
   theme_map() +
-  labs(fill='Population',title="California, Texas have largest populations", subtitle = "2017 population, U.S. Census", caption = "Source: U.S. Census ACS") +
-  #scale_fill_continuous(labels = comma) +
-  theme(legend.position="none")
-# i can't figure this out. it just keeps telling me that "Error: stat_sf requires the following missing aesthetics: geometry" so let's just move on and I will ask sean on Monday. 
+  labs(fill='Population',title="California, Texas have largest populations of children in foster care", subtitle = "2017 population, U.S. Census", caption = "Source: U.S. Census ACS") +
+   theme(legend.position="none")
 
 ```
+
+
 ```{r}
 # how many counties in the U.S. received more than 250,000 pills between 2006 and 2012? 
 
 arcos_county_pills_per_year <- summarized_county_annual(key = key)
 
 US_pharmacies_over250k <- arcos_county_pills_per_year %>%
-  select(BUYER_STATE, BUYER_COUNTY, DOSAGE_UNIT, year) %>%
-  arrange(desc(DOSAGE_UNIT)) %>%
-  filter(DOSAGE_UNIT > 250000)
+  select(buyer_state, buyer_county, dosage_unit, year) %>%
+  arrange(desc(dosage_unit)) %>%
+  filter(dosage_unit > 250000)
 
-# there are 17,000 counties that received more than that. what if we filter by just vermont? 
-
-
-vt_pharmacies_over250k <- arcos_county_pills_per_year %>%
-  select(BUYER_STATE, BUYER_COUNTY, DOSAGE_UNIT, year) %>%
-  arrange(desc(DOSAGE_UNIT)) %>%
-  filter(DOSAGE_UNIT > 250000) %>%
-  filter(BUYER_STATE=="VT")
-
-# there are 17,000 counties that received more than 250K. what if we filter by a bigger number? 
-
-US_pharmacies_over1m <- arcos_county_pills_per_year %>%
-  select(BUYER_STATE, BUYER_COUNTY, DOSAGE_UNIT, year) %>%
-  arrange(desc(DOSAGE_UNIT)) %>%
-  filter(DOSAGE_UNIT > 1000000)
-
-# wow there are still almost 11k options. I want to narrow it down by states that have the highest population of foster children. so let's do a glimpse of that data to decide which states to look at for the year 2006 (at the start of the crisis). 
+# there are 17,000 counties that received more than that. what if we look at which states had the most foster kids to decide which states to look at?
 
 children_in_foster_care_STATES %>%
   mutate(total_kids = as.numeric(total_kids)) %>%
@@ -323,13 +245,25 @@ children_in_foster_care_STATES %>%
 # it looks like California, Texas, NY, Florida, Pennsylvania, Michigan, Illinois, and Ohio had the highest rates of children in foster care.  I want to look at California counties now to see if the rate of pills per foster kid is higher in california than in other states. 
 
 US_pharmacies_CA <- arcos_county_pills_per_year %>%
-  select(BUYER_STATE, BUYER_COUNTY, DOSAGE_UNIT, year) %>%
-  arrange(desc(DOSAGE_UNIT)) %>%
-  filter(BUYER_STATE=="CA", year=="2006")
+  select(buyer_state, buyer_county, dosage_unit, year) %>%
+  arrange(desc(dosage_unit)) %>%
+  filter(buyer_state=="CA", year=="2006")
+
+# now, going back to VT for similar analysis- which counties received the most pills in Vermont? 
+
+vt_pharmacies_over250k <- arcos_county_pills_per_year %>%
+  select(buyer_state, buyer_county, dosage_unit, year) %>%
+  arrange(desc(dosage_unit)) %>%
+  filter(dosage_unit > 250000) %>%
+  filter(buyer_state=="VT")
+
+
+
 
 ```
 
 ```{r}
+
 # lets find the rate of pills per foster kid in california in 2006.
 foster_per_year_CA <- children_in_foster_care_STATES %>%
   filter(state=="California") %>%
@@ -351,15 +285,15 @@ pills_foster_CA <- buyer_yearly_CA %>%
  mutate(rate = total_pills/total_kids) %>%
  arrange(desc(rate)) 
 
-# so in California in 2006, there were 11965.49 pills per foster kid. That seems really high! What does that same number look like in Vermont?
+# so in California in 2006, there were 11,965.49 pills per foster kid. That seems really high! What does that same number look like in Vermont?
 
 ```
 
 ```{r}
+# running same questions as above, but for Vermont instead of California. I want a point of comparison. 
 foster_per_year_VT <- children_in_foster_care_STATES %>%
   filter(state=="Vermont") %>%
-   mutate(total_kids = as.numeric(total_kids)) %>%
-  glimpse
+   mutate(total_kids = as.numeric(total_kids)) 
 
 buyer_yearly_VT <- arcos_buyer_yearly %>%
   filter(buyer_state=="VT") %>%
@@ -367,50 +301,42 @@ buyer_yearly_VT <- arcos_buyer_yearly %>%
   group_by(year, buyer_state) %>%
   summarise(shipments = n(),
             total_pills = sum(dosage_unit)) %>%
-  rename(state=buyer_state) %>%
-  glimpse
+  rename(state=buyer_state) 
 
 pills_foster_VT <- buyer_yearly_VT %>%
  inner_join(foster_per_year_VT, by="year") %>%
- #group_by(state, total_kids) %>%
  mutate(rate = total_pills/total_kids) %>%
  arrange(desc(rate)) 
 
-# so in the same year, there were 10674.07 pills per foster kid sent to Vermont. These numbers are pretty similar, which is kind of shocking when you consider that there were only 1379 foster kids in Vermont in 2006, and 78373 foster kids in California in 2006. 
+# so in the same year, there were 10,674.07 pills per foster kid sent to Vermont. These numbers are pretty similar, which is kind of shocking when you consider that there were only 1379 foster kids in Vermont in 2006, and 78373 foster kids in California in 2006. 
 
-# We really seem to mostly be focusing on the rust belt for opioid data. I'm thinking someone should look at VT. ¯\_(ツ)_/¯
+# We really seem to mostly be focusing on the rust belt for opioid data. I'm thinking someone should look at VT, especially given the context of numbers when compared to California. 
 ```
 
 
 ```{r}
-# average pills per person by state
-#average foster per person by state aka children_in_foster_care_STATES merged with state populations then mutate to add a column of rate 
-# do a scatterplot of pills per person on one axis and foster per person on the other axis
-#look at whether there is any kind of relationship there 
-#statistical test 
-
 #join pills_per_person with foster_rate_pop_VT
 state_population_per_year <- state_population_per_year %>%
  rename(state=buyer_state)
 
-#glimpse(state_population_per_year)
-# buyer_annual_year_VT joined with state_population_per_year then mutate rate(pills per person)
 pills_per_person <- state_population_per_year %>%
   full_join(buyer_annual_year_VT, by="state") %>%
   mutate(rate=total_pills/population_average) %>%
   filter(state=="Vermont") %>% glimpse
+
 # set up state population per year
 state_population_per_year <- state_population_per_year %>%
   #rename(state=buyer_state) %>%
   filter(state=="VT") %>%
   mutate(state="Vermont") 
+
 #set up population for fosters per year. 
 foster_rate_pop_VT <- children_in_foster_care_STATES %>%
   full_join(state_population, by="state") %>%
   filter(state=="Vermont") %>%
   mutate(rate=(total_kids/population_average)*1000) %>%
   filter(year>="2006") %>%
-  filter(year<="2012") #%>% glimpse
+  filter(year<="2012") 
 
 # ok now that you have these two data sets, you need to do a scatterplot with them. first, inner join. then make the plot 
 
@@ -435,71 +361,8 @@ ggplot(scatter_pills_kids) +
   labs(x="fosters per 1000 people in VT", y="pills per person", title="as opioid use decreases, so do number of kids in foster care", caption = "Source: DEA ARCOS database, via Washington Post")
 ```
 
-
 ```{r}
-# okay now i do want to do the same data but nationwide, not just focused on vermont 
-
-#set up state population per year 
-state_population <- state_population #%>%
-# rename(state=buyer_state) %>%
-  #mutate(LocationType=state) %>%
-#  mutate(LocationType="State")
-
-# set up buyer data 
-buyer_annual_by_year <- buyer_annual_by_year %>%
-  rename(state=buyer_state) %>%
-  group_by(year, state) %>%
-  summarise(shipments = n(),
-            total_pills = sum(dosage_unit))
-
-#this is the rate of pills per person per year per state
-pills_per_person_national <- state_population_per_year_UPDATE %>%
-  full_join(buyer_annual_by_year, by="state") %>%
-  mutate(rate=total_pills/population_average) #%>%
- #replace(state, c(AK) c("Alaska"))
-
-# join pills_per_person_national with state names 
-pills_per_person_national_x <- pills_per_person_national %>%
-  full_join(state_names, by=c("state"="abb")) %>%
-  select(state=title, population_average, year, total_pills, rate) 
-
-#set up children in foster care 
-children_in_foster_care_STATES <- children_in_foster_care_STATES %>%
-  filter(year>="2006",
-         year<="2012")
-
-# everything in pills_per_person_national looks fine, but i cant make the datasets merge well because I can't get AK to equal alaska, etc. How can I fix this?
-
-# now do the rate of foster children per person per year per state
-foster_rate_pop_national <- children_in_foster_care_STATES %>%
-  full_join(state_population, by="state") %>%
-  #filter(state=="Vermont") %>%
-  mutate(rate=(total_kids/population_average)*1000) %>%
-  filter(year>="2006") %>%
-  filter(year<="2012")
-
-#next i need to do an inner join of these two data plots, and then do a scatterplot for them. 
-
-scatter_pills_kids_national <- foster_rate_pop_national %>%
-  inner_join(pills_per_person_national_x, by=c("state","year"))  %>%
- # select(state.y, year, population_average.x, total_pills, total_kids, rate.x, rate.y) %>%
-  rename(pills_per_person=rate.y) %>%
-  rename(foster_per_person=rate.x) 
-
-#so that's the end dataset. Now let's do a scatterplot!
-# this dataset is wrong and acomplete and total mess so ¯\_(ツ)_/¯
-
-ggplot(scatter_pills_kids_national) +
-  geom_point(aes(foster_per_person, pills_per_person)) +
-  geom_smooth(aes(foster_per_person, pills_per_person), method = "lm", se = FALSE)  +
-  scale_y_continuous(labels = comma) +
-  scale_x_continuous(labels = comma)  +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_text_repel(aes(foster_per_person, pills_per_person, label=foster_per_person),
-                  subset(scatter_pills_kids)) +
-  labs(x="rate of fosters per person", y="pills per person", title="XXX", caption = "Source: DEA ARCOS database, via Washington Post")
-
-
+# it definitely looks like there is a relationship there. 
 ```
 
 ```{r}
@@ -541,10 +404,128 @@ Vermont_pills_rate_2012 <- Vermont_pills_rate %>%
 
 # so now lets look at chittenden 
 Vermont_pills_rate_Chittenden <- Vermont_pills_rate %>%
-  filter(county=="CHITTENDEN")
+  filter(county=="CHITTENDEN") %>%
+  glimpse
+
+# lets also look at Essex, which seemed to receive the least. 
+Vermont_pills_rate_Essex <- Vermont_pills_rate %>%
+  filter(county=="ESSEX")
+
+# is there a particular year in Chittenden that stood out? 
+#In 2009, the rate of pills per person almost doubled, from 7.2/person in 2008 and 12.6/person in 2009. 
+# now lets do some reporting to find out why. 
+  
 ```
 
+```{r}
+# important numbers
 
+babies_per %>% glimpse
+# The number of babies per 1k born addicted to opioids in VT
+# in 2006: 12.9
+# in 2007: 14.6
+# in 2008: 19
+# in 2009: 28.5
+# in 2010: 27.1
+# in 2011: 33.8
+# in 2012: 43.7
+
+# The number of babies per 1k born addicted to opioids in CA:
+# in 2006: 1.1
+# in 2007: 1.0
+# in 2008: 1.1
+# in 2009: 1.2
+# in 2010: 1.3
+# in 2011: 1.6
+# in 2012: n/a
+
+children_in_foster_care %>% glimpse
+#Nationwide children in foster care:
+# in 2006: 510885
+# in 2007: 486619
+# in 2008: 459828
+# in 2009: 423773
+# in 2010: 408425
+# in 2011: 397885
+# in 2012: 397091
+
+#Children in foster care in Vermont: 
+# in 2006: 1379
+# in 2007: 1309
+# in 2008: 933
+# in 2009: 1062
+# in 2010: 1200
+# in 2011: 1010
+# in 2012: 975
+
+#Rate of children in foster care in Vermont per 10000 people: 
+# in 2006: 22.11
+# in 2007: 20.99
+# in 2008: 14.96
+# in 2009: 17.03
+# in 2010: 19.24
+# in 2011: 16.19
+# in 2012: 15.63
+
+pills_foster_VT %>% glimpse
+# number of pills sent to vermont: 
+# in 2006: 14719540
+# in 2007: 16493890
+# in 2008: 17106400
+# in 2009: 20783165
+# in 2010: 18037408
+# in 2011: 18383830
+# in 2012: 17890470
+
+#rate of pills per foster kid in Vermont: 
+# in 2006: 10674.07
+# in 2007: 12600.37
+# in 2008: 14255.33
+# in 2009: 19569.84
+# in 2010: 19332.70
+# in 2011: 18201.81
+# in 2012: 18349.20
+
+# rate of pills per person in vermont: 
+# in 2006: 23.60
+# in 2007: 26.45
+# in 2008: 27.43
+# in 2009: 33.32
+# in 2010: 28.92
+# in 2011: 29.45
+# in 2012: 28.69
+
+pills_foster_CA %>% glimpse
+# number of pills sent to California: 
+# in 2006: 1318766136
+# in 2007: 1301822983
+# in 2008: 1198384341
+# in 2009: 1167527178
+# in 2010: 1095626025
+# in 2011: 1037393654
+# in 2012: 937771106
+
+# rate of pills per foster kid in California: 
+# in 2006: 24292.04
+# in 2007: 23775.85
+# in 2008: 20766.35
+# in 2009: 19394.78
+# in 2010: 16274.17
+# in 2011: 14019.21
+# in 2012: 11965.49
+
+children_in_foster_care_CA %>% glimpse
+#number of children in California foster system
+# in 2006: 78373
+# in 2007: 73998
+# in 2008: 67323
+# in 2009: 60198
+# in 2010: 57708
+# in 2011: 54754
+# in 2012: 54288
+
+
+```
 
 
 
